@@ -20,7 +20,7 @@ type NewARProviderParam struct {
 	AdvertiseOfflineAutoretrieves bool
 }
 
-func NewARProviderInstance(param NewARProviderParam) *ARInstance {
+func NewARProviderInstance(param NewARProviderParam) (*ARInstance, error) {
 
 	viper.SetConfigFile(".env")
 	err := viper.ReadInConfig()
@@ -50,10 +50,15 @@ func NewARProviderInstance(param NewARProviderParam) *ARInstance {
 		param.AdvertiseOfflineAutoretrieves,
 	)
 
+	if err != nil {
+		fmt.Errorf("failed to create autoretrieve provider instance: %v", err)
+		return nil, err
+	}
+
 	return &ARInstance{
 		DB:       DB,
 		Provider: provider,
-	}
+	}, nil
 }
 
 func (ar *ARInstance) Run() {
