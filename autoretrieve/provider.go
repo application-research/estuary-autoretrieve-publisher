@@ -3,8 +3,6 @@ package autoretrieve
 import (
 	"context"
 	"fmt"
-	"github.com/spf13/viper"
-	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"time"
 )
@@ -20,23 +18,7 @@ type NewARProviderParam struct {
 	AdvertiseOfflineAutoretrieves bool
 }
 
-func NewARProviderInstance(param NewARProviderParam) (*ARInstance, error) {
-
-	viper.SetConfigFile(".env")
-	err := viper.ReadInConfig()
-
-	dbHost, okHost := viper.Get("DB_HOST").(string)
-	dbUser, okUser := viper.Get("DB_USER").(string)
-	dbPass, okPass := viper.Get("DB_PASS").(string)
-	dbName, okName := viper.Get("DB_NAME").(string)
-	dbPort, okPort := viper.Get("DB_PORT").(string)
-	if !okHost || !okUser || !okPass || !okName || !okPort {
-		panic("invalid database configuration")
-	}
-
-	dsn := "host=" + dbHost + " user=" + dbUser + " password=" + dbPass + " dbname=" + dbName + " port=" + dbPort + " sslmode=disable TimeZone=Asia/Shanghai"
-
-	DB, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+func NewARProviderInstance(DB *gorm.DB, param NewARProviderParam) (*ARInstance, error) {
 
 	duration, err := time.ParseDuration(param.IndexAdvertisementInterval)
 	if err != nil {
