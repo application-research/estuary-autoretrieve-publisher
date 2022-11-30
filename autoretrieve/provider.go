@@ -18,6 +18,10 @@ type NewARProviderParam struct {
 	AdvertiseOfflineAutoretrieves bool
 }
 
+var (
+	AutoretrieveProviderBatchSize = uint(25000)
+)
+
 func NewARProviderInstance(DB *gorm.DB, param NewARProviderParam) (*ARInstance, error) {
 
 	duration, err := time.ParseDuration(param.IndexAdvertisementInterval)

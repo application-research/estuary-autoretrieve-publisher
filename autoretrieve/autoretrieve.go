@@ -22,9 +22,6 @@ import (
 )
 
 var log = logging.Logger("autoretrieve")
-var (
-	AutoretrieveProviderBatchSize = uint(25000)
-)
 
 type Autoretrieve struct {
 	gorm.Model

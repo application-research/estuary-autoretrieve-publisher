@@ -9,11 +9,19 @@ import (
 	"gorm.io/gorm"
 )
 
+var (
+	DefaultIndexerURL            = "https://cid.contact"
+	DefaultAdvertisementInterval = "15m"
+)
+
 func main() {
 
-	indexAdvertisementInterval := *flag.String("indexer-advertisement-interval", "15m", "Index Advertisement")
-	indexerUrl := *flag.String("indexer-url", "", "Index Advertisement")
+	indexAdvertisementInterval := *flag.String("indexer-advertisement-interval", DefaultAdvertisementInterval, "Index Advertisement")
+	indexerUrl := *flag.String("indexer-url", DefaultIndexerURL, "Index Advertisement")
 	advertiseOfflineAutoretrieves := *flag.Bool("advertise_offline_autoretrieve", false, "Index Advertise Offline")
+
+	//	 default is 25000.
+	autoretrieve.AutoretrieveProviderBatchSize = uint(*flag.Int("autoretrieve-provider-batch-size", 25000, "Autoretrieve Provider Batch Size"))
 
 	//	 setup your DB first
 	database, err := setupDB()
