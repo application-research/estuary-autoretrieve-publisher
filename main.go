@@ -8,7 +8,7 @@ import (
 
 func main() {
 
-	indexAdvertisementInterval := *flag.String("indexer-advertisement-interval", "", "Index Advertisement")
+	indexAdvertisementInterval := *flag.String("indexer-advertisement-interval", "15m", "Index Advertisement")
 	indexerUrl := *flag.String("indexer-url", "", "Index Advertisement")
 	advertiseOfflineAutoretrieves := *flag.Bool("advertise_offline_autoretrieve", false, "Index Advertise Offline")
 
