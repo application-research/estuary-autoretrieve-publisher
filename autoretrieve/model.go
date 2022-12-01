@@ -4,7 +4,10 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
+	"github.com/filecoin-project/index-provider/engine"
 	"github.com/ipfs/go-cid"
+	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/multiformats/go-multihash"
 	"gorm.io/gorm"
 	"time"
 )
@@ -16,6 +19,55 @@ const (
 	File
 	Directory
 )
+
+// A batch that has been published for a specific autoretrieve
+type PublishedBatch struct {
+	gorm.Model
+
+	FirstContentID     uint
+	Count              uint
+	AutoretrieveHandle string
+}
+
+func (PublishedBatch) TableName() string { return "published_batches" }
+
+type HeartbeatAutoretrieveResponse struct {
+	Handle            string         `json:"handle"`
+	LastConnection    time.Time      `json:"lastConnection"`
+	LastAdvertisement time.Time      `json:"lastAdvertisement"`
+	AddrInfo          *peer.AddrInfo `json:"addrInfo"`
+	AdvertiseInterval string         `json:"advertiseInterval"`
+}
+
+type AutoretrieveListResponse struct {
+	Handle            string         `json:"handle"`
+	LastConnection    time.Time      `json:"lastConnection"`
+	LastAdvertisement time.Time      `json:"lastAdvertisement"`
+	AddrInfo          *peer.AddrInfo `json:"addrInfo"`
+}
+
+type AutoretrieveInitResponse struct {
+	Handle            string         `json:"handle"`
+	Token             string         `json:"token"`
+	LastConnection    time.Time      `json:"lastConnection"`
+	AddrInfo          *peer.AddrInfo `json:"addrInfo"`
+	AdvertiseInterval string         `json:"advertiseInterval"`
+}
+
+type Provider struct {
+	engine                *engine.Engine
+	db                    *gorm.DB
+	advertisementInterval time.Duration
+	advertiseOffline      bool
+	batchSize             uint
+}
+
+type Iterator struct {
+	mhs            []multihash.Multihash
+	index          uint
+	firstContentID uint
+	count          uint
+}
 
 type DbCID struct {
 	CID cid.Cid
