@@ -23,13 +23,13 @@ var (
 )
 
 func NewARProviderInstance(DB *gorm.DB, param NewARProviderParam) (*ARInstance, error) {
-
+	var arInstance *ARInstance
 	duration, err := time.ParseDuration(param.IndexAdvertisementInterval)
 	if err != nil {
 		panic(err)
 	}
 
-	provider, err := NewProvider(
+	arProvider, err := NewProvider(
 		DB,
 		duration,
 		param.IndexerUrl,
@@ -41,10 +41,11 @@ func NewARProviderInstance(DB *gorm.DB, param NewARProviderParam) (*ARInstance, 
 		return nil, err
 	}
 
-	return &ARInstance{
+	arInstance = &ARInstance{
 		DB:       DB,
-		Provider: provider,
-	}, nil
+		Provider: arProvider,
+	}
+	return arInstance, nil
 }
 
 func (ar *ARInstance) Run() {

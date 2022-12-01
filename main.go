@@ -2,6 +2,7 @@ package main
 
 import (
 	"ar-standalone/autoretrieve"
+	"context"
 	"flag"
 	"fmt"
 	"github.com/spf13/viper"
@@ -42,7 +43,7 @@ func main() {
 		return // don't even start the provider
 	}
 
-	provider.Run() // run it!!!
+	provider.Provider.Run(context.Background())
 }
 
 func setupDB() (*gorm.DB, error) { // it's a pointer to a gorm.DB
