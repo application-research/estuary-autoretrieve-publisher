@@ -72,55 +72,6 @@ func (autoretrieve *Autoretrieve) AddrInfo() (*peer.AddrInfo, error) {
 	return &addrInfo, nil
 }
 
-// A batch that has been published for a specific autoretrieve
-type PublishedBatch struct {
-	gorm.Model
-
-	FirstContentID     uint
-	Count              uint
-	AutoretrieveHandle string
-}
-
-func (PublishedBatch) TableName() string { return "published_batches" }
-
-type HeartbeatAutoretrieveResponse struct {
-	Handle            string         `json:"handle"`
-	LastConnection    time.Time      `json:"lastConnection"`
-	LastAdvertisement time.Time      `json:"lastAdvertisement"`
-	AddrInfo          *peer.AddrInfo `json:"addrInfo"`
-	AdvertiseInterval string         `json:"advertiseInterval"`
-}
-
-type AutoretrieveListResponse struct {
-	Handle            string         `json:"handle"`
-	LastConnection    time.Time      `json:"lastConnection"`
-	LastAdvertisement time.Time      `json:"lastAdvertisement"`
-	AddrInfo          *peer.AddrInfo `json:"addrInfo"`
-}
-
-type AutoretrieveInitResponse struct {
-	Handle            string         `json:"handle"`
-	Token             string         `json:"token"`
-	LastConnection    time.Time      `json:"lastConnection"`
-	AddrInfo          *peer.AddrInfo `json:"addrInfo"`
-	AdvertiseInterval string         `json:"advertiseInterval"`
-}
-
-type Provider struct {
-	engine                *engine.Engine
-	db                    *gorm.DB
-	advertisementInterval time.Duration
-	advertiseOffline      bool
-	batchSize             uint
-}
-
-type Iterator struct {
-	mhs            []multihash.Multihash
-	index          uint
-	firstContentID uint
-	count          uint
-}
-
 func NewIterator(db *gorm.DB, firstContentID uint, count uint) (*Iterator, error) {
 
 	// Read CID strings for this content ID
