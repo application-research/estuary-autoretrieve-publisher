@@ -1,8 +1,9 @@
-# AR Standalone
-Experimental standalone AR/Provider.
+# Estuary Autoretrieve Publisher
+
+A standalone service that queries Estuary CIDs and publishes them to Autoretrieve.
 
 ## Installation
-# Create the DB connection .env file
+### Create the DB connection .env file
 
 ```
 DB_NAME=
@@ -12,9 +13,22 @@ DB_PASS=
 DB_PORT=
 ```
 
-# Install run
+### Install run
 ```
+// Install
 go mod tidy
 go mod download
-go run main.go 
+go build -tags netgo -ldflags '-s -w' -o estuary-autoretrieve-publisher
+
+// Run
+./estuary-autoretrieve-publisher
+```
+
+### Optional flags
+```
+//  these are the default values
+--indexer-advertisement-interval=15m 
+--indexer-url=https://cid.contact/ 
+--advertise_offline_autoretrieve=false
+--autoretrieve-provider-batch-size
 ```
