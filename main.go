@@ -1,10 +1,10 @@
 package main
 
 import (
-	"ar-standalone/autoretrieve"
 	"context"
 	"flag"
 	"fmt"
+	"github.com/application-research/estuary-autoretrieve-publisher/autoretrieve"
 	"github.com/spf13/viper"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"

@@ -1,13 +1,9 @@
-# Estuary AR Service - Standalone version.
+# Estuary Autoretrieve Publisher
 
-This is a decouple/standalone version of AR service / provider on Estuary built by (CTTO):
-- https://github.com/elijaharita 
-- https://github.com/gmelodie
-
-The intention is to isolate this service and run it as a standalone background job.
+An Estuary microservice that queries Estuary CIDs and publishes them to Autoretrieve. This is was pulled out from the main Estuary repository built by [Gabe](https://github.com/gmelodie) and [Elijah](https://github.com/elijaharita), to isolate and run it as a background job.
 
 ## Installation
-# Create the DB connection .env file
+### Create the DB connection .env file
 
 ```
 DB_NAME=
@@ -17,8 +13,22 @@ DB_PASS=
 DB_PORT=
 ```
 
-# Install run
+### Install run
 ```
-go build -tags netgo -ldflags '-s -w' -o ar-provider-run
-./ar-provider-run
+// Install
+go mod tidy
+go mod download
+go build -tags netgo -ldflags '-s -w' -o estuary-autoretrieve-publisher
+
+// Run
+./estuary-autoretrieve-publisher
+```
+
+### Optional flags
+```
+//  these are the default values
+--indexer-advertisement-interval=15m 
+--indexer-url=https://cid.contact/ 
+--advertise_offline_autoretrieve=false
+--autoretrieve-provider-batch-size
 ```
