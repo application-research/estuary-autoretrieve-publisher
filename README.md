@@ -1,6 +1,6 @@
 # Estuary Autoretrieve Publisher
 
-A standalone service that queries Estuary CIDs and publishes them to Autoretrieve. This is was pulled out from the main Estuary repository built by [Gabe](https://github.com/gmelodie) and [Elijah](https://github.com/elijaharita), to isolate and run it as a background job.
+An Estuary microservice that queries Estuary CIDs and publishes them to Autoretrieve. This is was pulled out from the main Estuary repository built by [Gabe](https://github.com/gmelodie) and [Elijah](https://github.com/elijaharita), to isolate and run it as a background job.
 
 ## Installation
 ### Create the DB connection .env file
