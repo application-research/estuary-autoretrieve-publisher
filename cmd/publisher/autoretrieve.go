@@ -45,13 +45,9 @@ func NewIterator(db *gorm.DB, firstObjectID uint, count uint) (*Iterator, error)
 	if err := db.Raw(
 		"SELECT cid FROM objects WHERE id BETWEEN ? AND ?",
 		firstObjectID,
-		firstObjectID+count,
+		firstObjectID+count-1,
 	).Scan(&cidStrings).Error; err != nil {
 		return nil, err
-	}
-
-	if len(cidStrings) == 0 {
-		return nil, fmt.Errorf("no multihashes")
 	}
 
 	log.Infof(
@@ -80,6 +76,10 @@ func NewIterator(db *gorm.DB, firstObjectID uint, count uint) (*Iterator, error)
 		}
 
 		mhs = append(mhs, cid.Hash())
+	}
+
+	if len(mhs) == 0 {
+		return nil, fmt.Errorf("no multihashes")
 	}
 
 	if emptyCount != 0 {
