@@ -32,32 +32,32 @@ type Provider struct {
 }
 
 type Iterator struct {
-	mhs            []multihash.Multihash
-	index          uint
-	firstContentID uint
-	count          uint
+	mhs           []multihash.Multihash
+	index         uint
+	firstObjectID uint
+	count         uint
 }
 
-func NewIterator(db *gorm.DB, firstContentID uint, count uint) (*Iterator, error) {
+func NewIterator(db *gorm.DB, firstObjectID uint, count uint) (*Iterator, error) {
 
-	// Read CID strings for this content ID
+	// Read CID strings for this object ID
 	var cidStrings []string
 	if err := db.Raw(
-		"SELECT objects.cid FROM objects LEFT JOIN obj_refs ON objects.id = obj_refs.object WHERE obj_refs.content BETWEEN ? AND ?",
-		firstContentID,
-		firstContentID+count,
+		"SELECT cid FROM objects WHERE id BETWEEN ? AND ?",
+		firstObjectID,
+		firstObjectID+count,
 	).Scan(&cidStrings).Error; err != nil {
 		return nil, err
 	}
 
 	if len(cidStrings) == 0 {
-		return nil, fmt.Errorf("no multihashes for this content")
+		return nil, fmt.Errorf("no multihashes")
 	}
 
 	log.Infof(
-		"Creating iterator for content IDs %d to %d (%d MHs)",
-		firstContentID,
-		firstContentID+count,
+		"Creating iterator for object IDs %d to %d (%d MHs)",
+		firstObjectID,
+		firstObjectID+count,
 		len(cidStrings),
 	)
 
@@ -87,9 +87,9 @@ func NewIterator(db *gorm.DB, firstContentID uint, count uint) (*Iterator, error
 	}
 
 	return &Iterator{
-		mhs:            mhs,
-		firstContentID: firstContentID,
-		count:          count,
+		mhs:           mhs,
+		firstObjectID: firstObjectID,
+		count:         count,
 	}, nil
 }
 
@@ -124,18 +124,18 @@ func NewProvider(db *gorm.DB, cfg Config) (*Provider, error) {
 		}
 
 		log = log.With(
-			"first_content_id", params.firstContentID,
+			"first_object_id", params.firstObjectID,
 			"count", params.count,
 			"indexer_peer_id", params.provider,
 		)
 
 		log.Infof(
-			"Received pull request (peer ID: %s, first content ID: %d, count: %d)",
+			"Received pull request (peer ID: %s, first object ID: %d, count: %d)",
 			params.provider,
-			params.firstContentID,
+			params.firstObjectID,
 			params.count,
 		)
-		iter, err := NewIterator(db, params.firstContentID, params.count)
+		iter, err := NewIterator(db, params.firstObjectID, params.count)
 		if err != nil {
 			return nil, err
 		}
@@ -168,14 +168,14 @@ func (provider *Provider) Run(ctx context.Context) error {
 
 		log.Infof("Starting autoretrieve advertisement tick")
 
-		// Find the highest current content ID for later
-		var lastContent Content
-		if err := provider.db.Last(&lastContent).Error; err != nil {
+		// Find the highest current object ID for later
+		var lastObject Object
+		if err := provider.db.Last(&lastObject).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
-				log.Infof("Failed to get last provider content ID: %v", err)
+				log.Infof("Failed to get last provider object ID: %v", err)
 				continue
 			} else {
-				log.Warnf("No contents to advertise")
+				log.Warnf("No objects to advertise")
 				continue
 			}
 		}
@@ -206,27 +206,27 @@ func (provider *Provider) Run(ctx context.Context) error {
 			}
 
 			// For each batch that should be advertised...
-			for firstContentID := uint(0); firstContentID <= lastContent.ID; firstContentID += provider.cfg.BatchSize {
+			for firstObjectID := uint(0); firstObjectID <= lastObject.ID; firstObjectID += provider.cfg.BatchSize {
 
-				// Find the amount of contents in this batch (likely less than
+				// Find the amount of objects in this batch (likely less than
 				// the batch size if this is the last batch)
 				count := provider.cfg.BatchSize
-				remaining := lastContent.ID - firstContentID
+				remaining := lastObject.ID - firstObjectID
 				if remaining < count {
 					count = remaining
 				}
 
-				log := log.With("first_content_id", firstContentID, "count", count)
+				log := log.With("first_object_id", firstObjectID, "count", count)
 
 				// Search for an entry (this array will have either 0 or 1
 				// elements depending on whether an advertisement was found)
 				var publishedBatches []PublishedBatch
 				if err := provider.db.Where(
-					"autoretrieve_handle = ? AND first_content_id = ?",
+					"autoretrieve_handle = ? AND first_object_id = ?",
 					autoretrieve.Handle,
-					firstContentID,
+					firstObjectID,
 				).Find(&publishedBatches).Error; err != nil {
-					log.Errorf("Failed to get published contents: %v", err)
+					log.Errorf("Failed to get published objects: %v", err)
 					continue
 				}
 
@@ -241,9 +241,9 @@ func (provider *Provider) Run(ctx context.Context) error {
 				// The batch size should always be the same unless the
 				// config changes
 				contextID, err := makeContextID(contextParams{
-					provider:       addrInfo.ID,
-					firstContentID: firstContentID,
-					count:          provider.cfg.BatchSize,
+					provider:      addrInfo.ID,
+					firstObjectID: firstObjectID,
+					count:         provider.cfg.BatchSize,
 				})
 				if err != nil {
 					log.Errorf("Failed to make context ID: %v", err)
@@ -290,7 +290,7 @@ func (provider *Provider) Run(ctx context.Context) error {
 
 					log.Infof("Published new batch with advertisement CID %s", adCid)
 					if err := provider.db.Create(&PublishedBatch{
-						FirstContentID:     firstContentID,
+						FirstContentID:     firstObjectID,
 						AutoretrieveHandle: autoretrieve.Handle,
 						Count:              count,
 					}).Error; err != nil {
@@ -343,15 +343,15 @@ func (provider *Provider) Stop() error {
 }
 
 type contextParams struct {
-	provider       peer.ID
-	firstContentID uint
-	count          uint
+	provider      peer.ID
+	firstObjectID uint
+	count         uint
 }
 
-// Content ID to context ID
+// Object ID to context ID
 func makeContextID(params contextParams) ([]byte, error) {
 	contextID := make([]byte, 8)
-	binary.BigEndian.PutUint32(contextID[0:4], uint32(params.firstContentID))
+	binary.BigEndian.PutUint32(contextID[0:4], uint32(params.firstObjectID))
 	binary.BigEndian.PutUint32(contextID[4:8], uint32(params.count))
 
 	peerIDBytes, err := params.provider.MarshalBinary()
@@ -362,7 +362,7 @@ func makeContextID(params contextParams) ([]byte, error) {
 	return contextID, nil
 }
 
-// Context ID to content ID
+// Context ID to object ID
 func readContextID(contextID []byte) (contextParams, error) {
 	peerID, err := peer.IDFromBytes(contextID[8:])
 	if err != nil {
@@ -370,8 +370,8 @@ func readContextID(contextID []byte) (contextParams, error) {
 	}
 
 	return contextParams{
-		provider:       peerID,
-		firstContentID: uint(binary.BigEndian.Uint32(contextID[0:4])),
-		count:          uint(binary.BigEndian.Uint32(contextID[4:8])),
+		provider:      peerID,
+		firstObjectID: uint(binary.BigEndian.Uint32(contextID[0:4])),
+		count:         uint(binary.BigEndian.Uint32(contextID[4:8])),
 	}, nil
 }

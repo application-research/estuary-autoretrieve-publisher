@@ -193,3 +193,11 @@ type Content struct {
 	DagSplit  bool `json:"dagSplit"`
 	SplitFrom uint `json:"splitFrom"`
 }
+
+type Object struct {
+	ID         uint  `gorm:"primarykey"`
+	Cid        DbCID `gorm:"index"`
+	Size       int
+	Reads      int
+	LastAccess time.Time
+}
