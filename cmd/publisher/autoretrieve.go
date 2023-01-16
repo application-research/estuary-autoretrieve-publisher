@@ -1,75 +1,41 @@
-package autoretrieve
+package main
 
 import (
 	"context"
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/ipfs/go-cid"
-	"github.com/multiformats/go-multiaddr"
-	"github.com/multiformats/go-multihash"
 	"io"
-	"strings"
 	"time"
+
+	"github.com/ipfs/go-cid"
+	"github.com/multiformats/go-multihash"
 
 	providerpkg "github.com/filecoin-project/index-provider"
 	"github.com/filecoin-project/index-provider/engine"
 	"github.com/filecoin-project/index-provider/metadata"
-	logging "github.com/ipfs/go-log/v2"
-	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"gorm.io/gorm"
 )
 
-var log = logging.Logger("autoretrieve")
-
-type Autoretrieve struct {
-	gorm.Model
-
-	Handle            string `gorm:"unique"`
-	Token             string `gorm:"unique"`
-	LastConnection    time.Time
-	LastAdvertisement time.Time
-	PubKey            string `gorm:"unique"`
-	Addresses         string
+type Config struct {
+	IndexerURL            string
+	AdvertisementInterval time.Duration
+	AdvertiseOffline      bool
+	BatchSize             uint
 }
 
-func (autoretrieve *Autoretrieve) AddrInfo() (*peer.AddrInfo, error) {
-	addrStrings := strings.Split(autoretrieve.Addresses, ",")
+type Provider struct {
+	engine *engine.Engine
+	db     *gorm.DB
+	cfg    Config
+}
 
-	pubKeyBytes, err := crypto.ConfigDecodeKey(autoretrieve.PubKey)
-	if err != nil {
-		return nil, err
-	}
-	pubKey, err := crypto.UnmarshalPublicKey(pubKeyBytes)
-	if err != nil {
-		return nil, err
-	}
-	peerID, err := peer.IDFromPublicKey(pubKey)
-	if err != nil {
-		return nil, err
-	}
-
-	var addrs []multiaddr.Multiaddr
-	var invalidAddrStrings []string
-	for _, addrString := range addrStrings {
-		addr, err := multiaddr.NewMultiaddr(addrString)
-		if err != nil {
-			invalidAddrStrings = append(invalidAddrStrings, addrString)
-			continue
-		}
-		addrs = append(addrs, addr)
-	}
-	if len(invalidAddrStrings) != 0 {
-		return nil, fmt.Errorf("got invalid addresses: %#v", invalidAddrStrings)
-	}
-
-	addrInfo := peer.AddrInfo{
-		ID:    peerID,
-		Addrs: addrs,
-	}
-
-	return &addrInfo, nil
+type Iterator struct {
+	mhs            []multihash.Multihash
+	index          uint
+	firstContentID uint
+	count          uint
 }
 
 func NewIterator(db *gorm.DB, firstContentID uint, count uint) (*Iterator, error) {
@@ -139,8 +105,8 @@ func (iter *Iterator) Next() (multihash.Multihash, error) {
 	return mh, nil
 }
 
-func NewProvider(db *gorm.DB, advertisementInterval time.Duration, indexerURL string, advertiseOffline bool) (*Provider, error) {
-	eng, err := engine.New(engine.WithPublisherKind(engine.DataTransferPublisher), engine.WithDirectAnnounce(indexerURL))
+func NewProvider(db *gorm.DB, cfg Config) (*Provider, error) {
+	eng, err := engine.New(engine.WithPublisherKind(engine.DataTransferPublisher), engine.WithDirectAnnounce(cfg.IndexerURL))
 	if err != nil {
 		return nil, fmt.Errorf("failed to init engine: %v", err)
 	}
@@ -178,11 +144,9 @@ func NewProvider(db *gorm.DB, advertisementInterval time.Duration, indexerURL st
 	})
 
 	return &Provider{
-		engine:                eng,
-		db:                    db,
-		advertisementInterval: advertisementInterval,
-		advertiseOffline:      advertiseOffline,
-		batchSize:             AutoretrieveProviderBatchSize,
+		engine: eng,
+		db:     db,
+		cfg:    cfg,
 	}, nil
 }
 
@@ -194,8 +158,8 @@ func (provider *Provider) Run(ctx context.Context) error {
 	}
 
 	// time.Tick will drop ticks to make up for slow advertisements
-	log.Infof("Starting autoretrieve advertisement loop every %s", provider.advertisementInterval)
-	ticker := time.NewTicker(provider.advertisementInterval)
+	log.Infof("Starting autoretrieve advertisement loop every %s", provider.cfg.AdvertisementInterval)
+	ticker := time.NewTicker(provider.cfg.AdvertisementInterval)
 	for ; true; <-ticker.C {
 		if ctx.Err() != nil {
 			ticker.Stop()
@@ -227,8 +191,8 @@ func (provider *Provider) Run(ctx context.Context) error {
 			log := log.With("autoretrieve_handle", autoretrieve.Handle)
 
 			// Make sure it is online (if offline checking isn't disabled)
-			if !provider.advertiseOffline {
-				if time.Since(autoretrieve.LastConnection) > provider.advertisementInterval {
+			if !provider.cfg.AdvertiseOffline {
+				if time.Since(autoretrieve.LastConnection) > provider.cfg.AdvertisementInterval {
 					log.Debugf("Skipping offline autoretrieve")
 					continue
 				}
@@ -242,11 +206,11 @@ func (provider *Provider) Run(ctx context.Context) error {
 			}
 
 			// For each batch that should be advertised...
-			for firstContentID := uint(0); firstContentID <= lastContent.ID; firstContentID += provider.batchSize {
+			for firstContentID := uint(0); firstContentID <= lastContent.ID; firstContentID += provider.cfg.BatchSize {
 
 				// Find the amount of contents in this batch (likely less than
 				// the batch size if this is the last batch)
-				count := provider.batchSize
+				count := provider.cfg.BatchSize
 				remaining := lastContent.ID - firstContentID
 				if remaining < count {
 					count = remaining
@@ -279,7 +243,7 @@ func (provider *Provider) Run(ctx context.Context) error {
 				contextID, err := makeContextID(contextParams{
 					provider:       addrInfo.ID,
 					firstContentID: firstContentID,
-					count:          provider.batchSize,
+					count:          provider.cfg.BatchSize,
 				})
 				if err != nil {
 					log.Errorf("Failed to make context ID: %v", err)

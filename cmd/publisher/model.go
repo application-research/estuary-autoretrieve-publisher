@@ -1,15 +1,17 @@
-package autoretrieve
+package main
 
 import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
-	"github.com/filecoin-project/index-provider/engine"
-	"github.com/ipfs/go-cid"
-	"github.com/libp2p/go-libp2p/core/peer"
-	"github.com/multiformats/go-multihash"
-	"gorm.io/gorm"
+	"strings"
 	"time"
+
+	"github.com/ipfs/go-cid"
+	"github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/multiformats/go-multiaddr"
+	"gorm.io/gorm"
 )
 
 type ContentType int64
@@ -19,6 +21,55 @@ const (
 	File
 	Directory
 )
+
+type Autoretrieve struct {
+	gorm.Model
+
+	Handle            string `gorm:"unique"`
+	Token             string `gorm:"unique"`
+	LastConnection    time.Time
+	LastAdvertisement time.Time
+	PubKey            string `gorm:"unique"`
+	Addresses         string
+}
+
+func (autoretrieve *Autoretrieve) AddrInfo() (*peer.AddrInfo, error) {
+	addrStrings := strings.Split(autoretrieve.Addresses, ",")
+
+	pubKeyBytes, err := crypto.ConfigDecodeKey(autoretrieve.PubKey)
+	if err != nil {
+		return nil, err
+	}
+	pubKey, err := crypto.UnmarshalPublicKey(pubKeyBytes)
+	if err != nil {
+		return nil, err
+	}
+	peerID, err := peer.IDFromPublicKey(pubKey)
+	if err != nil {
+		return nil, err
+	}
+
+	var addrs []multiaddr.Multiaddr
+	var invalidAddrStrings []string
+	for _, addrString := range addrStrings {
+		addr, err := multiaddr.NewMultiaddr(addrString)
+		if err != nil {
+			invalidAddrStrings = append(invalidAddrStrings, addrString)
+			continue
+		}
+		addrs = append(addrs, addr)
+	}
+	if len(invalidAddrStrings) != 0 {
+		return nil, fmt.Errorf("got invalid addresses: %#v", invalidAddrStrings)
+	}
+
+	addrInfo := peer.AddrInfo{
+		ID:    peerID,
+		Addrs: addrs,
+	}
+
+	return &addrInfo, nil
+}
 
 // A batch that has been published for a specific autoretrieve
 type PublishedBatch struct {
@@ -52,21 +103,6 @@ type AutoretrieveInitResponse struct {
 	LastConnection    time.Time      `json:"lastConnection"`
 	AddrInfo          *peer.AddrInfo `json:"addrInfo"`
 	AdvertiseInterval string         `json:"advertiseInterval"`
-}
-
-type Provider struct {
-	engine                *engine.Engine
-	db                    *gorm.DB
-	advertisementInterval time.Duration
-	advertiseOffline      bool
-	batchSize             uint
-}
-
-type Iterator struct {
-	mhs            []multihash.Multihash
-	index          uint
-	firstContentID uint
-	count          uint
 }
 
 type DbCID struct {

@@ -27,8 +27,8 @@ go build -tags netgo -ldflags '-s -w' -o estuary-autoretrieve-publisher
 ### Optional flags
 ```
 //  these are the default values
---indexer-advertisement-interval=15m 
+--advertisement-interval=15m 
 --indexer-url=https://cid.contact/ 
---advertise_offline_autoretrieve=false
---autoretrieve-provider-batch-size
+--advertise-offline=false
+--batch-size=250000
 ```
