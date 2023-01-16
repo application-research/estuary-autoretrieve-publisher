@@ -23,20 +23,24 @@ func main() {
 		Action: cmd,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:  "advertisement-interval",
-				Value: DefaultAdvertisementInterval,
+				Name:    "advertisement-interval",
+				Value:   DefaultAdvertisementInterval,
+				EnvVars: []string{"AR_PUB_ADVERTISEMENT_INTERVAL"},
 			},
 			&cli.StringFlag{
-				Name:  "indexer-url",
-				Value: DefaultIndexerURL,
+				Name:    "indexer-url",
+				Value:   DefaultIndexerURL,
+				EnvVars: []string{"AR_PUB_INDEXER_URL"},
 			},
 			&cli.BoolFlag{
-				Name:  "advertise-offline",
-				Value: false,
+				Name:    "advertise-offline",
+				Value:   false,
+				EnvVars: []string{"AR_PUB_ADVERTISE_OFFLINE"},
 			},
 			&cli.UintFlag{
-				Name:  "batch-size",
-				Value: DefaultBatchSize,
+				Name:    "batch-size",
+				Value:   DefaultBatchSize,
+				EnvVars: []string{"AR_PUB_BATCH_SIZE"},
 			},
 		},
 	}
