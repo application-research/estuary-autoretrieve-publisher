@@ -222,7 +222,7 @@ func (provider *Provider) Run(ctx context.Context) error {
 				// elements depending on whether an advertisement was found)
 				var publishedBatches []PublishedBatch
 				if err := provider.db.Where(
-					"autoretrieve_handle = ? AND first_object_id = ?",
+					"autoretrieve_handle = ? AND first_content_id = ?",
 					autoretrieve.Handle,
 					firstObjectID,
 				).Find(&publishedBatches).Error; err != nil {
