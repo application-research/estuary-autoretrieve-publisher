@@ -11,9 +11,9 @@ import (
 	"github.com/ipfs/go-cid"
 	"github.com/multiformats/go-multihash"
 
-	providerpkg "github.com/filecoin-project/index-provider"
-	"github.com/filecoin-project/index-provider/engine"
-	"github.com/filecoin-project/index-provider/metadata"
+	providerpkg "github.com/ipni/index-provider"
+	"github.com/ipni/index-provider/engine"
+	"github.com/ipni/index-provider/metadata"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"gorm.io/gorm"
 )
@@ -256,7 +256,7 @@ func (provider *Provider) Run(ctx context.Context) error {
 						ctx,
 						addrInfo,
 						contextID,
-						metadata.New(metadata.Bitswap{}),
+						metadata.Default.New(metadata.Bitswap{}),
 					)
 					if err != nil {
 						// If there was an error, check whether already
@@ -273,7 +273,7 @@ func (provider *Provider) Run(ctx context.Context) error {
 								ctx,
 								addrInfo,
 								contextID,
-								metadata.New(metadata.Bitswap{}),
+								metadata.Default.New(metadata.Bitswap{}),
 							)
 							if err != nil {
 								log.Errorf("Failed to publish batch after deleting unexpected existing advertisement: %v", err)
@@ -317,7 +317,7 @@ func (provider *Provider) Run(ctx context.Context) error {
 						ctx,
 						addrInfo,
 						contextID,
-						metadata.New(metadata.Bitswap{}),
+						metadata.Default.New(metadata.Bitswap{}),
 					)
 					if err != nil {
 						log.Errorf("Failed to publish batch: %v", err)
