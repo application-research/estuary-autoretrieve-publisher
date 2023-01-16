@@ -112,7 +112,7 @@ type DbCID struct {
 func (dbc *DbCID) Scan(v interface{}) error {
 	b, ok := v.([]byte)
 	if !ok {
-		return fmt.Errorf("dbcids must get bytes!")
+		return fmt.Errorf("dbcids must get bytes")
 	}
 
 	if len(b) == 0 {
