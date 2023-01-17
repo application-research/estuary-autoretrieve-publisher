@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/ipfs/go-cid"
+	"github.com/ipfs/go-datastore"
 	"github.com/multiformats/go-multihash"
 
 	providerpkg "github.com/ipni/index-provider"
@@ -105,8 +106,12 @@ func (iter *Iterator) Next() (multihash.Multihash, error) {
 	return mh, nil
 }
 
-func NewProvider(db *gorm.DB, cfg Config) (*Provider, error) {
-	eng, err := engine.New(engine.WithPublisherKind(engine.DataTransferPublisher), engine.WithDirectAnnounce(cfg.IndexerURL))
+func NewProvider(db *gorm.DB, ds datastore.Batching, cfg Config) (*Provider, error) {
+	eng, err := engine.New(
+		engine.WithPublisherKind(engine.DataTransferPublisher),
+		engine.WithDirectAnnounce(cfg.IndexerURL),
+		engine.WithDatastore(ds),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to init engine: %v", err)
 	}

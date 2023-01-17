@@ -8,6 +8,7 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 
+	leveldb "github.com/ipfs/go-ds-leveldb"
 	"github.com/spf13/viper"
 	"github.com/urfave/cli/v2"
 	"gorm.io/driver/postgres"
@@ -62,6 +63,11 @@ func cmd(ctx *cli.Context) error {
 		log.Fatalf("Failed to connect database: %v", err)
 	}
 
+	ds, err := leveldb.NewDatastore("data/datastore", nil)
+	if err != nil {
+		return err
+	}
+
 	advertisementIntervalString := ctx.String("advertisement-interval")
 	advertisementInterval, err := time.ParseDuration(advertisementIntervalString)
 	if err != nil {
@@ -74,7 +80,7 @@ func cmd(ctx *cli.Context) error {
 
 	batchSize := ctx.Uint("batch-size")
 
-	provider, err := NewProvider(database, Config{
+	provider, err := NewProvider(database, ds, Config{
 		AdvertisementInterval: advertisementInterval,
 		IndexerURL:            indexerURL,
 		AdvertiseOffline:      advertiseOffline,
