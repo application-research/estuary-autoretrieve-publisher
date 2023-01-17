@@ -5,6 +5,9 @@ import (
 	"os"
 	"time"
 
+	"net/http"
+	_ "net/http/pprof"
+
 	"github.com/spf13/viper"
 	"github.com/urfave/cli/v2"
 	"gorm.io/driver/postgres"
@@ -18,7 +21,6 @@ var (
 )
 
 func main() {
-
 	app := &cli.App{
 		Action: cmd,
 		Flags: []cli.Flag{
@@ -51,6 +53,10 @@ func main() {
 }
 
 func cmd(ctx *cli.Context) error {
+	go func() {
+		http.ListenAndServe("0.0.0.0:8080", nil)
+	}()
+
 	database, err := setupDB()
 	if err != nil {
 		log.Fatalf("Failed to connect database: %v", err)
