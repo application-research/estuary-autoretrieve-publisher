@@ -18,7 +18,7 @@ import (
 var (
 	DefaultIndexerURL            = "https://cid.contact"
 	DefaultAdvertisementInterval = "15m"
-	DefaultBatchSize             = uint(25000)
+	DefaultBatchSize             = uint64(25000)
 )
 
 func main() {
@@ -40,7 +40,7 @@ func main() {
 				Value:   false,
 				EnvVars: []string{"AR_PUB_ADVERTISE_OFFLINE"},
 			},
-			&cli.UintFlag{
+			&cli.Uint64Flag{
 				Name:    "batch-size",
 				Value:   DefaultBatchSize,
 				EnvVars: []string{"AR_PUB_BATCH_SIZE"},
@@ -78,7 +78,7 @@ func cmd(ctx *cli.Context) error {
 
 	advertiseOffline := ctx.Bool("advertise-offline")
 
-	batchSize := ctx.Uint("batch-size")
+	batchSize := ctx.Uint64("batch-size")
 
 	provider, err := NewProvider(database, ds, Config{
 		AdvertisementInterval: advertisementInterval,

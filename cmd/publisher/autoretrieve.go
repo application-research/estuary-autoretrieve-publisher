@@ -23,7 +23,7 @@ type Config struct {
 	IndexerURL            string
 	AdvertisementInterval time.Duration
 	AdvertiseOffline      bool
-	BatchSize             uint
+	BatchSize             uint64
 }
 
 type Provider struct {
@@ -34,12 +34,12 @@ type Provider struct {
 
 type Iterator struct {
 	mhs           []multihash.Multihash
-	index         uint
-	firstObjectID uint
-	count         uint
+	index         uint64
+	firstObjectID uint64
+	count         uint64
 }
 
-func NewIterator(db *gorm.DB, firstObjectID uint, count uint) (*Iterator, error) {
+func NewIterator(db *gorm.DB, firstObjectID uint64, count uint64) (*Iterator, error) {
 
 	// Read CID strings for this object ID
 	var cidStrings []string
@@ -95,7 +95,7 @@ func NewIterator(db *gorm.DB, firstObjectID uint, count uint) (*Iterator, error)
 }
 
 func (iter *Iterator) Next() (multihash.Multihash, error) {
-	if iter.index == uint(len(iter.mhs)) {
+	if iter.index == uint64(len(iter.mhs)) {
 		return nil, io.EOF
 	}
 
@@ -211,7 +211,7 @@ func (provider *Provider) Run(ctx context.Context) error {
 			}
 
 			// For each batch that should be advertised...
-			for firstObjectID := uint(0); firstObjectID <= lastObject.ID; firstObjectID += provider.cfg.BatchSize {
+			for firstObjectID := uint64(0); firstObjectID <= lastObject.ID; firstObjectID += provider.cfg.BatchSize {
 
 				// Find the amount of objects in this batch (likely less than
 				// the batch size if this is the last batch)
@@ -238,7 +238,7 @@ func (provider *Provider) Run(ctx context.Context) error {
 				// And check if it's...
 
 				// 1. fully advertised, or no changes: do nothing
-				if len(publishedBatches) != 0 && publishedBatches[0].Count == count {
+				if len(publishedBatches) != 0 && uint64(publishedBatches[0].Count) == count {
 					log.Debugf("Skipping already advertised batch")
 					continue
 				}
@@ -349,15 +349,15 @@ func (provider *Provider) Stop() error {
 
 type contextParams struct {
 	provider      peer.ID
-	firstObjectID uint
-	count         uint
+	firstObjectID uint64
+	count         uint64
 }
 
 // Object ID to context ID
 func makeContextID(params contextParams) ([]byte, error) {
-	contextID := make([]byte, 8)
-	binary.BigEndian.PutUint32(contextID[0:4], uint32(params.firstObjectID))
-	binary.BigEndian.PutUint32(contextID[4:8], uint32(params.count))
+	contextID := make([]byte, 16)
+	binary.BigEndian.PutUint64(contextID[0:8], params.firstObjectID)
+	binary.BigEndian.PutUint64(contextID[8:16], params.count)
 
 	peerIDBytes, err := params.provider.MarshalBinary()
 	if err != nil {
@@ -369,14 +369,14 @@ func makeContextID(params contextParams) ([]byte, error) {
 
 // Context ID to object ID
 func readContextID(contextID []byte) (contextParams, error) {
-	peerID, err := peer.IDFromBytes(contextID[8:])
+	peerID, err := peer.IDFromBytes(contextID[16:])
 	if err != nil {
 		return contextParams{}, fmt.Errorf("failed to read context peer ID: %v", err)
 	}
 
 	return contextParams{
 		provider:      peerID,
-		firstObjectID: uint(binary.BigEndian.Uint32(contextID[0:4])),
-		count:         uint(binary.BigEndian.Uint32(contextID[4:8])),
+		firstObjectID: binary.BigEndian.Uint64(contextID[0:8]),
+		count:         binary.BigEndian.Uint64(contextID[8:16]),
 	}, nil
 }
