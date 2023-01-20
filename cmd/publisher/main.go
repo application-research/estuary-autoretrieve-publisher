@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path"
 	"time"
 
 	"net/http"
@@ -45,6 +46,11 @@ func main() {
 				Value:   DefaultBatchSize,
 				EnvVars: []string{"AR_PUB_BATCH_SIZE"},
 			},
+			&cli.StringFlag{
+				Name:    "data-dir",
+				Value:   "data",
+				EnvVars: []string{"AR_PUB_DATA_DIR"},
+			},
 		},
 	}
 
@@ -63,7 +69,9 @@ func cmd(ctx *cli.Context) error {
 		log.Fatalf("Failed to connect database: %v", err)
 	}
 
-	ds, err := leveldb.NewDatastore("data/datastore", nil)
+	dataDir := ctx.String("data-dir")
+
+	ds, err := leveldb.NewDatastore(path.Join(dataDir, "datastore"), nil)
 	if err != nil {
 		return err
 	}
